@@ -238,3 +238,52 @@ print("\n Fastest Information Spreaders (Highest Closeness):")
 for user, score in top_spreaders: 
     print(f"  - User {user}: (Score: {score:.4f})")
 
+
+
+
+
+
+9
+
+
+
+import pandas as pd
+import networkx as nx
+
+# Load dataset
+df = pd.read_csv("facebook_combined.txt", sep=" ", names=["u1", "u2"])
+print("Dataset loaded successfully.")
+
+# Create graph
+G = nx.from_pandas_edgelist(df, "u1", "u2")
+print(f"Graph created with {G.number_of_nodes()} users and {G.number_of_edges()} friendships.")
+
+print("\nCalculating influence... (Using a faster approximation for Betweenness)")
+
+# Degree (popularity)
+top_popular = sorted(G.degree(), key=lambda x: x[1], reverse=True)[:5]
+
+# Betweenness (approx)
+bet = nx.betweenness_centrality(G, k=200, seed=42)
+top_connectors = sorted(bet.items(), key=lambda x: x[1], reverse=True)[:5]
+
+# Closeness
+clo = nx.closeness_centrality(G)
+top_spreaders = sorted(clo.items(), key=lambda x: x[1], reverse=True)[:5]
+
+print("\nCalculation complete.")
+print("\n--- Top 5 Most Influential Users on Facebook ---")
+
+print("\n Most Popular (Highest Number of Friends):")
+for u, f in top_popular:
+    print(f"  - User {u}: {f} friends")
+
+print("\n Best Connectors (Highest Betweenness - Approximation):")
+for u, s in top_connectors:
+    print(f"  - User {u}: (Score: {s:.4f})")
+
+print("\n Fastest Information Spreaders (Highest Closeness):")
+for u, s in top_spreaders:
+    print(f"  - User {u}: (Score: {s:.4f})")
+
+
