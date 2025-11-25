@@ -1,0 +1,60 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import silhouette_score
+import seaborn as sns
+
+# 1. Load data
+df = pd.read_csv("Mall_Customers.csv")
+
+# 2. Select features
+X = df[['Age', 'Annual_Income_(k$)', 'Spending_Score']]
+
+# 3. Scale features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# 4. Find best K using Elbow & Silhouette
+inertias, sil_scores = [], []
+K_range = range(2, 11)
+
+for k in K_range:
+    km = KMeans(n_clusters=k, random_state=42, n_init=10)
+    labels = km.fit_predict(X_scaled)
+    inertias.append(km.inertia_)
+    sil_scores.append(silhouette_score(X_scaled, labels))
+
+# Plot results
+plt.figure(figsize=(12, 5))
+plt.subplot(1, 2, 1)
+plt.plot(K_range, inertias, marker='o')
+plt.title("Elbow Method")
+plt.xlabel("k"); plt.ylabel("Inertia")
+
+plt.subplot(1, 2, 2)
+plt.plot(K_range, sil_scores, marker='o')
+plt.title("Silhouette Score")
+plt.xlabel("k"); plt.ylabel("Score")
+# plt.tight_layout()
+# plt.savefig("elbow_silhouette.png")
+
+# 5. Final KMeans with k=5
+kmeans = KMeans(n_clusters=5, random_state=42, n_init=10)
+df["Cluster"] = kmeans.fit_predict(X_scaled)
+
+# 6. Cluster Profile
+print("\nCluster Profile:\n", df.groupby("Cluster")[X.columns].mean())
+
+# 7. Visualize clusters (original scale)
+plt.figure(figsize=(10, 7))
+sns.scatterplot(data=df, x='Annual_Income_(k$)', y='Spending_Score',
+                hue='Cluster', palette='viridis', s=100)
+plt.title("Customer Segments")
+plt.savefig("cluster_scatterplot.png")
+
+# 8. Visualize scaled data
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x=X_scaled[:,1], y=X_scaled[:,2], hue=df['Cluster'], palette='viridis')
+plt.title("Scaled Clusters")
+plt.savefig("clusters_scaled.png")
