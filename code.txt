@@ -58,3 +58,172 @@ plt.figure(figsize=(8, 6))
 sns.scatterplot(x=X_scaled[:,1], y=X_scaled[:,2], hue=df['Cluster'], palette='viridis')
 plt.title("Scaled Clusters")
 plt.savefig("clusters_scaled.png")
+
+
+
+
+
+
+6
+
+
+import pandas as pd
+from mlxtend.preprocessing import TransactionEncoder
+from mlxtend.frequent_patterns import apriori, association_rules
+
+# Load CSV and automatically remove BOM
+df = pd.read_csv("Assignment-1_Data.csv", encoding='utf-8-sig')
+
+# Rename BOM column to plain BillNo (if present)
+df.rename(columns=lambda x: x.replace('\ufeff', ''), inplace=True)
+
+print("Successfully read the CSV file.")
+
+# Cleaning
+df.dropna(subset=['CustomerID'], inplace=True)
+df['BillNo'] = df['BillNo'].astype(str)
+df = df[~df['BillNo'].str.contains('C')]
+df['Itemname'] = df['Itemname'].str.strip()
+
+print("\nCleaned DataFrame preview:\n", df.head())
+
+# Prepare transactions
+transactions = df.groupby('BillNo')['Itemname'].apply(list).tolist()
+
+# One-hot encode
+te = TransactionEncoder()
+df_encoded = pd.DataFrame(te.fit(transactions).transform(transactions),
+                          columns=te.columns_)
+
+print("\nOne-hot encoded DataFrame preview:\n", df_encoded.head())
+
+# Apriori
+frequent_itemsets = apriori(df_encoded, min_support=0.01, use_colnames=True)
+print("\nFrequent Itemsets:\n", frequent_itemsets)
+
+# Association Rules
+rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=0.5)
+print("\nAssociation Rules:\n", rules)
+
+
+
+
+7
+
+import pandas as pd
+import re
+import nltk
+from nltk.corpus import stopwords
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Download stopwords if needed
+try:
+    stopwords.words("english")
+except:
+    nltk.download("stopwords")
+
+# 1. Load Data
+df = pd.read_csv("7817_1.csv")
+df.dropna(subset=["reviews.text", "reviews.rating"], inplace=True)
+df["full_review"] = df["reviews.title"].fillna("") + " " + df["reviews.text"]
+
+# Rating → Sentiment
+df["sentiment"] = df["reviews.rating"].apply(
+    lambda r: "positive" if r >= 4 else ("neutral" if r == 3 else "negative")
+)
+
+# 2. Preprocessing
+stop_words = set(stopwords.words("english"))
+def clean(text):
+    text = re.sub(r"[^a-z\s]", "", str(text).lower())
+    return " ".join([w for w in text.split() if w not in stop_words])
+
+df["cleaned"] = df["full_review"].apply(clean)
+
+# 3. Train Naïve Bayes Model
+X_train, X_test, y_train, y_test = train_test_split(
+    df["cleaned"], df["sentiment"], test_size=0.2, random_state=42, stratify=df["sentiment"]
+)
+
+vec = CountVectorizer()
+X_train_vec = vec.fit_transform(X_train)
+X_test_vec = vec.transform(X_test)
+
+model = MultinomialNB()
+model.fit(X_train_vec, y_train)
+
+# 4. Evaluation
+y_pred = model.predict(X_test_vec)
+print("\nAccuracy:", round(accuracy_score(y_test, y_pred)*100, 2), "%")
+print("\nClassification Report:\n", classification_report(y_test, y_pred, zero_division=0))
+
+cm = confusion_matrix(y_test, y_pred, labels=["negative", "neutral", "positive"])
+sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
+            xticklabels=["negative", "neutral", "positive"],
+            yticklabels=["negative", "neutral", "positive"])
+plt.title("Confusion Matrix")
+plt.show()
+
+
+
+
+9
+
+
+import pandas as pd 
+import networkx as nx 
+import matplotlib.pyplot as plt 
+
+# 1. Load the Facebook Dataset  
+try: 
+    file_path = 'facebook_combined.txt' 
+    df = pd.read_csv(file_path, sep=' ', names=['user_1', 'user_2']) 
+    print("Dataset loaded successfully.") 
+except FileNotFoundError: 
+    print(f"Error: '{file_path}' not found. Please make sure it's in the same directory.") 
+    exit() 
+
+# 2. Create the Social Network Graph  
+G = nx.from_pandas_edgelist(df, 'user_1', 'user_2') 
+print(f"Graph created with {G.number_of_nodes()} users and {G.number_of_edges()} friendships.") 
+
+# 3. Find the Most Influential Users (Updated for Speed)  
+print("\nCalculating influence... (Using a faster approximation for Betweenness)") 
+
+# A) Degree Centrality (fast) 
+degree = dict(G.degree()) 
+top_popular = sorted(degree.items(), key=lambda item: item[1], reverse=True)[:5] 
+
+# B) Betweenness Centrality (using a fast approximation) 
+# We estimate by using a random sample of k=200 nodes. This is MUCH faster. 
+betweenness = nx.betweenness_centrality(G, k=200, seed=42) 
+top_connectors = sorted(betweenness.items(), key=lambda item: item[1], reverse=True)[:5] 
+
+# C) Closeness Centrality
+# Note: This can take a moment on large graphs.
+print("Calculating Closeness Centrality...")
+closeness = nx.closeness_centrality(G) 
+top_spreaders = sorted(closeness.items(), key=lambda item: item[1], reverse=True)[:5] 
+
+print("\nCalculation complete.") 
+
+# 4. Print the Results  
+print("\n--- Top 5 Most Influential Users on Facebook ---") 
+
+print("\n Most Popular (Highest Number of Friends):") 
+for user, friends in top_popular: 
+    print(f"  - User {user}: {friends} friends") 
+
+print("\n Best Connectors (Highest Betweenness - Approximation):") 
+for user, score in top_connectors: 
+    print(f"  - User {user}: (Score: {score:.4f})") 
+
+print("\n Fastest Information Spreaders (Highest Closeness):") 
+for user, score in top_spreaders: 
+    print(f"  - User {user}: (Score: {score:.4f})")
+
