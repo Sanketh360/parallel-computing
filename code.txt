@@ -67,6 +67,9 @@ plt.savefig("clusters_scaled.png")
 6
 
 
+
+
+
 import pandas as pd
 from mlxtend.preprocessing import TransactionEncoder
 from mlxtend.frequent_patterns import apriori, association_rules
@@ -109,6 +112,10 @@ print("\nAssociation Rules:\n", rules)
 
 
 7
+
+
+
+
 
 import pandas as pd
 import re
@@ -172,7 +179,11 @@ plt.show()
 
 
 
+
+
 9
+
+
 
 
 import pandas as pd 
